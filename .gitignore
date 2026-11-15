@@ -1,0 +1,22 @@
+# 本地 skill 安装联接：不进版本库
+.agents/
+
+# 凭证
+.gitoken
+
+# 第三方参考资料与临时目录
+tmp/
+
+# Node / 打包
+node_modules/
+*.tgz
+.npm/
+
+# 本机运行时产物（dev-flow 在目标工程里生成，不属于本仓库）
+codespec/
+
+# 编辑器与系统
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

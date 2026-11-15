@@ -1,0 +1,17 @@
+{
+  "name": "@chenz/dsh-skill-dev-flow",
+  "version": "0.1.0",
+  "description": "dev-flow skill suite: env -> proposal -> delta-spec -> delta-design -> task -> validation -> solver, as a DeepSeek Harness plugin",
+  "type": "module",
+  "main": "index.js",
+  "files": [
+    "index.js",
+    "df-*"
+  ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "~4.1.0",
+    "@deepseek-ai/dsh-skill": "0.2.2-rc.3"
+  },
+  "keywords": ["dsh-plugin", "skill", "dev-flow"]
+}
