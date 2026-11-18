@@ -24,7 +24,7 @@ df-validation 只做一件事：**在动手实现之前，把文档里的坑挖�
 |---|---|
 | 基线 spec（`specs/spec.md` 或 `specs/<capability>/spec.md`）、`{df_spec_dir}/design.md` | 停手：基线不全，检查没有参照 |
 | `{df_change_dir}/proposal.md`、`delta-spec.md`、`delta-design.md`、`task.md` | 停手：指出缺哪份，先补齐再检 |
-| `{df_proj_dir}/docs/arch_{df_us_id}.md`、`{df_proj_dir}/README.md` | 架构与项目门面；缺了说明架构文档还没产出，先补齐 |
+| `{df_change_dir}/delta-arch.md`、`{df_proj_dir}/README.md` | 增量架构分析与项目门面；缺了说明对应阶段没跑完，先补齐 |
 
 `{df_change_dir}/validation.md` 若已存在，读进来：本次是**追加轮次**，不是重写历史结论。
 

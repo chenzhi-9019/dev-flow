@@ -16,7 +16,8 @@ import sys
 
 SPEC_SECTIONS = ["## Purpose", "## Requirements"]
 DESIGN_SECTIONS = ["## Context", "## Goals / Non-Goals", "## Decisions", "## Risks / Trade-offs"]
-ARCH_SECTIONS = ["## 1.", "## 3.", "## 4.", "## 5.", "## 10."]
+DELTA_ARCH_SECTIONS = ["## 变更背景", "## 待修改模块", "## 直接关联模块",
+                      "## 时序图", "## UML 图", "## 对整体架构的影响"]
 DELTA_SPEC_SECTIONS = ["## ADDED Requirements", "## MODIFIED Requirements",
                        "## REMOVED Requirements", "## RENAMED Requirements"]
 DELTA_DESIGN_SECTIONS = [
@@ -316,24 +317,28 @@ def check_review(path, text):
             add("一般", "W_REVIEW_CONCLUSION", path, i, f"结论 {conclusion!r} 不合规")
 
 
-def check_arch(arch_path, readme_path, merged_path, us):
-    arch_text = read(arch_path)
+def check_arch(change_arch_path, readme_path, merged_path, us):
+    arch_text = read(change_arch_path)
     merged_text = read(merged_path) or ""
     readme_text = read(readme_path)
     if arch_text is None:
-        if f"df-arch:{us}" in merged_text:
+        if "df-arch:%s" % us in merged_text:
             return  # 已并入 docs/arch.md，属于收尾后的正常状态
-        add("严重", "E_NOFILE", arch_path, 0, "docs/arch_{us}.md 不存在，也没并入 docs/arch.md")
+        add("严重", "E_NOFILE", change_arch_path, 0, "delta-arch.md 不存在，也没并入 docs/arch.md")
         return
-    check_placeholders(arch_path, arch_text)
-    for sec in ARCH_SECTIONS:
+    check_placeholders(change_arch_path, arch_text)
+    for sec in DELTA_ARCH_SECTIONS:
         if sec not in arch_text:
-            add("严重", "E_ARCH_SECTION", arch_path, 1, f"缺章节 {sec}")
-    check_mermaid(arch_path, arch_text)
-    if "## 变更记录" not in arch_text:
-        add("一般", "W_ARCH_CHANGELOG", arch_path, 1, "缺 变更记录 小节")
+            add("严重", "E_ARCH_SECTION", change_arch_path, 1, f"缺章节 {sec}")
+    if "sequenceDiagram" not in arch_text:
+        add("严重", "E_ARCH_SEQUENCE", change_arch_path, 1, "缺时序图（sequenceDiagram 必需）")
+    if "classDiagram" not in arch_text and "flowchart" not in arch_text:
+        add("严重", "E_ARCH_UML", change_arch_path, 1, "缺 UML 图（classDiagram 或组件 flowchart 必需）")
+    check_mermaid(change_arch_path, arch_text)
+    if merged_text == "" and readme_text is not None:
+        pass
     if readme_text is None:
-        add("严重", "E_NOFILE", readme_path, 0, "README.md 不存在")
+        add("一般", "W_README_MISSING", readme_path, 0, "README.md 不存在（建议由基线阶段补）")
     else:
         check_placeholders(readme_path, readme_text)
         if not readme_text.lstrip().startswith("# "):
@@ -447,7 +452,7 @@ def main():
         else:
             check_placeholders(review_path, review_text)
             check_review(review_path, review_text)
-        check_arch(os.path.join(proj, "docs", f"arch_{args.us}.md"),
+        check_arch(os.path.join(change_dir, "delta-arch.md"),
                    os.path.join(proj, "README.md"),
                    os.path.join(proj, "docs", "arch.md"),
                    args.us)

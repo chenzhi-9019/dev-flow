@@ -22,7 +22,8 @@ df-scope 产出一份文件：@`{df_change_dir}/scope.md`@。它定义**执行�
 | 文件 | 用途 | 缺失时 |
 |---|---|---|
 | @`{df_change_dir}/task.md`@ | 任务清单，白名单的唯一依据 | **停手**：没有任务就无从划边界 |
-| @`{df_change_dir}/delta-spec.md`@ | 需求口径，判断某文件是否真的该动 | 可跳过 |
+| `{df_change_dir}/delta-spec.md` | 需求口径，判断某文件是否真的该动 | 可跳过 |
+| `{df_change_dir}/delta-design.md`、`delta-arch.md` | 改动落点与受影响模块；白名单必须覆盖它们提到的模块 | 可跳过（仅提示） |
 
 ### 2. 汇总白名单
 

@@ -1,6 +1,6 @@
 ---
 name: df-solver
-description: 按 task.md 的本次任务并行推进实现，依据每项标注的方式分派给主 Agent、subagent 或后台任务；完成后把本次变更合并进全局 spec.md 与 design.md，回填 task.md 状态与 validation.md 遗留，并出简报等用户确认。
+description: 按 task.md 的本次任务并行推进实现，依据每项标注的方式分派给主 Agent、subagent 或后台任务；按 scope.md 拦越界，回填 task.md 状态与 validation.md 遗留并出简报。不写基线。
 ---
 
 df-solver 做两件事：把 `task.md` 里的任务跑完，然后把这次改动的结果**合并进全局基线**。不新增需求、不扩范围、不改 delta 正文。
@@ -156,48 +156,12 @@ AskUserQuestion({
 3. **一次只改一个变量**，改完立刻重跑验收命令
 4. **同一原因连续两次没修好** → 停下标 `阻塞`，把已排除的可能性列出来交给用户，不继续试错
 
-### 6. 合并进基线
-
-任务跑完后，把本次变更合并进 `{df_spec_dir}/spec.md` 与 `design.md`——不做这一步，基线与代码就会脱节。
-
-**合并依据**：`delta-spec.md` 的四类差异 + `delta-design.md` 的 `## Changes` 与 `## Baseline Diff` + 实际代码改动的结果。
-
-`spec.md` 的合并规则：
-
-| delta 里的类别 | 动作 |
-|---|---|
-| `ADDED` | 新增 `### Requirement:`，至少带一个 `#### Scenario:` |
-| `MODIFIED` | 就地改对应条目，保留其章节位置 |
-| `REMOVED` | 删掉该条目整节，含其场景 |
-| `RENAMED` | 只改标题，正文与场景不动 |
-
-基线 spec 可能有多份文件：按能力拆分时，`<capability>/<需求名>` 定位到 `{df_spec_dir}/<capability>/spec.md`；单文件布局直接改 `spec.md`。定位不到就报错，不许在错误的文件里改。
-
-`design.md` 按 `## Baseline Diff` 更新对应章节：`架构总览`、`组件与依赖`、`关键流程时序` 的图按**实际实现**重画（节点名实读代码确认），`Decisions` 追加本次决策与理由，`Risks / Trade-offs` 更新。
-
-决策已有 ADR 时，`## Decisions` 写链接加一句摘要（如 `见 docs/adr/0007-x.md`），**不复述 ADR 全文**——ADR 是决策的事实源，design.md 只做索引。发现两者矛盾时以 ADR 为准，并在简报点名。
-
-三条硬约束：
-
-- **以实现为准**：代码实际行为与 delta 不一致时，基线写实际行为，并把差异写进简报与 `validation.md` 的遗留。不许照抄 delta 把偏差盖住。
-- **合并必须幂等**：`ADDED` 的条目若基线里已有同名需求，就地更新而不是再追加一条；同一 US 因评审返工而重跑合并时，不得出现重复章节。
-- **现在时**：合并后不允许出现"将要/改为"或 `> 待实现：`；基线描述的是已经成立的事实。
-- **只改这两份**：基线可以由本 skill 更新，delta 正文一律不动。
-
-合并后必跑一次结构校验（脚本随本 skill 一起分发，路径 `scripts/check.py`，找不到就跳过并在简报里说明）：
-
-```bash
-python "<本 skill 目录>/scripts/check.py" --proj "{df_proj_dir}" --us "{df_us_id}" --baseline-only
-```
-
-有 `严重` 项就修到 0 再出简报——基线是唯一被反复覆盖的文件，合并完不复检等于没护栏。
-
-### 7. 回填其他文档
+### 6. 回填其他文档
 
 - `task.md`：只更新 `状态` 列（`待办` / `进行中` / `完成` / `阻塞`），**不改任务正文**
 - `validation.md`：`## 遗留` 里标着"实现后确认"的条目给出结论；实现与 delta 的分叉记在这里；仍无解的原样留着
 
-### 8. 简报与确认
+### 7. 简报与确认
 
 收尾前输出一段简报（不超过 8 行），然后在同一条消息里提一题。简报至少包含：
 
@@ -207,7 +171,6 @@ python "<本 skill 目录>/scripts/check.py" --proj "{df_proj_dir}" --us "{df_us
 - **验证证据**：每个 `完成` 的任务跑了哪条验收命令、结果如何（一条一行，不许写"已验证"了事）
 - **复杂度自查**：净增行数、有没有为将来预留的东西、有没有未使用符号（都应为「无」）
 - **测试模式**：TDD 还是常规；TDD 时说明新增了几个测试、覆盖哪几个 seam、是否都先红后绿
-- **基线合并结果**：`spec.md` 增/改/删/改名各几条；`design.md` 更新了哪几节；与 delta 不一致之处（没有就写"无"）
 - `task.md` 状态与 `validation.md` 遗留的结论
 - 未决项或假设（没有就写"无"）
 
@@ -234,9 +197,9 @@ AskUserQuestion({
 
 - **只做 `task.md` 里的本次任务，且只在 `scope.md` 的白名单内**：不新增需求、不顺手重构、不清理无关代码。
 - **越界即停**：白名单外的文件即使"改了更好"也不许动，必须先报告并拿到确认。
-- **只更新基线与回填**：允许写 `spec.md`、`design.md`（合并本次结果）、`task.md` 状态、`validation.md` 遗留；`delta-spec.md` / `delta-design.md` 正文不动。
+- **不写基线**：合并权归收尾，本 skill 只回填 `task.md` 状态与 `validation.md` 遗留；`spec.md` / `design.md` / `docs/arch.md` / `README.md` 一个字节都不动。
 - **不改任务拆分**：方式与边界由已确认的 `task.md` 定；唯一允许的回填是 `## 测试策略` 一节。
-- **不合并架构文档**：`docs/arch_{US}.md` 并入 `docs/arch.md` 属于收尾环节；本 skill 也不写 `README.md`。
+- **不合并任何文档**：`delta-spec` / `delta-design` / `delta-arch` 并入基线与 `README.md` 都属于收尾环节。
 - **不推进 `df_stage`**。
 - **提问只用 AskUserQuestion**。
 - **宿主没有 AskUserQuestion 时**：退回编号列表提问，不跳过提问。

@@ -1,5 +1,6 @@
+
 #!/usr/bin/env python3
-"""Merge docs/arch_<US>.md into docs/arch.md, then delete the per-US file.
+"""Merge {change}/delta-arch.md into docs/arch.md, then delete the per-change file.
 
 Usage: python merge_arch.py --proj <df_proj_dir> --us <df_us_id> [--dry-run] [--keep]
 
@@ -10,7 +11,7 @@ import json
 import os
 import sys
 
-HEADER = "# 架构文档\n\n<!-- 由 df-arch 生成的各 US 架构文档按时间合并而成；每个块由 df-arch:<US> 标记界定。 -->\n"
+HEADER = "# 架构文档\n\n<!-- 基线由基线阶段维护；每个变更的增量分析在此按时间累积，块由 df-arch:<US> 界定。 -->\n"
 
 
 def emit(payload, code):
@@ -28,14 +29,15 @@ def main():
     ap.add_argument("--proj", default=os.getcwd())
     ap.add_argument("--us", required=True)
     ap.add_argument("--dry-run", action="store_true")
-    ap.add_argument("--keep", action="store_true", help="合并后保留 per-US 文件")
+    ap.add_argument("--keep", action="store_true", help="合并后保留 delta-arch.md")
     args = ap.parse_args()
 
     proj = os.path.abspath(args.proj)
+    change = os.path.join(proj, "codespec", "changes", args.us)
     docs = os.path.join(proj, "docs")
-    src = os.path.join(docs, f"arch_{args.us}.md")
+    src = os.path.join(change, "delta-arch.md")
     dst = os.path.join(docs, "arch.md")
-    begin, end = f"<!-- df-arch:{args.us} -->", f"<!-- /df-arch:{args.us} -->"
+    begin, end = "<!-- df-arch:%s -->" % args.us, "<!-- /df-arch:%s -->" % args.us
 
     merged = ""
     if os.path.exists(dst):

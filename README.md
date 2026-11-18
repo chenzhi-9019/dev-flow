@@ -15,13 +15,13 @@ dev-flow 是 13 个彼此独立的 skill，由一个编排入口串联。所有�
 ## 流水线
 
 ```
-df-init（编排：持有 df_stage，按阶段驱动，可中断续跑）
+df-init（编排：进场取 df-env 的阶段推断，按 4 道验收关驱动，收尾分析式合并）
   │
-  ├─ df-env        定位工程、建 codespec 骨架、定 US 编号
-  ├─ df-proposal   扫描整个工程，建立全局 spec.md / design.md
+  ├─ df-env        定位工程、建 codespec 骨架、定 US 编号、推断各条变更的阶段
+  ├─ df-proposal   维护四份项目级文档：spec.md / design.md / docs/arch.md / README.md
   ├─ df-delta-spec 本次变更的需求差异
   ├─ df-delta-design 本次变更的设计落点与基线差异
-  ├─ df-arch       架构文档 docs/arch_{US}.md 与项目 README
+  ├─ df-arch       增量架构分析 delta-arch.md（待改模块 + 直接关联模块，时序图 + UML 必需）
   ├─ df-task       任务拆分（方式/依赖/验收命令/自测）
   ├─ df-scope      执行边界：可改白名单 / 明确不动 / 越界处置
   ├─ df-validation 文档级检查：遗漏、冲突、无法实现，分三档
@@ -40,11 +40,11 @@ df-init（编排：持有 df_stage，按阶段驱动，可中断续跑）
 ## 产物结构
 
 ```
-<目标工程>/codespec/
+{目标工程}/codespec/
   specs/
     spec.md                全局能力基线
     design.md              全局决策与风险
-    <capability>/spec.md   可选：按能力拆分的规格
+    {capability}/spec.md   可选：按能力拆分的规格
   changes/
     US-{时间戳}-{序号}-{功能名}/
       delta-spec.md        本次需求差异
@@ -52,11 +52,11 @@ df-init（编排：持有 df_stage，按阶段驱动，可中断续跑）
       task.md              任务清单与详情
       scope.md             执行边界
       validation.md        文档检查与处理记录
+      delta-arch.md        本次增量架构分析（收尾时并入 docs/arch.md）
       review.md            评审意见与回归证据
     archive/               已归档的变更
-<目标工程>/docs/
-  arch_{US}.md             本次架构文档（收尾时并入 arch.md）
-  arch.md                  合并后的架构文档
+{目标工程}/docs/
+  arch.md                  项目级架构文档（基线阶段维护；各变更的增量块在此累积）
   adr/                     架构决策记录
 ```
 
@@ -89,13 +89,17 @@ New-Item -ItemType Junction -Path .agents\skills\df-env -Target .\df-env
 /df-tdd             TDD 规则（实现阶段被调用）
 ```
 
-每个阶段结束都会出一份简报并等你确认；不符合就直接输入修改意见，最多迭代 3 轮。
+验收关共 4 道：`proposal` → `delta-spec + delta-design` → `arch + task + scope` → `validation` 到 `review` 的报告。每道关出一次简报，不符合就直接输入修改意见（最多迭代 3 轮）。
+
+每个阶段都**读全量上游产物**：`delta-spec` 起就带 `docs/arch.md` 与 `README.md`，越往后读得越全，不再出现「设计时不知道架构」。
+
+收尾的合并**不用脚本**：`delta-spec→spec.md`、`delta-design→design.md`、`delta-arch→arch.md` 并更新 `README.md`，全部由分析后重写完成——脚本只会追加，会把过时描述留在文档里。
 
 ## 自检脚本
 
 ```bash
 python scripts/check_skills.py                  # 套件一致性：命名、指针、独立性、拷贝漂移
-python df-validation/scripts/check.py --proj <工程> --us <US>   # 产物结构校验
+python df-validation/scripts/check.py --proj {工程} --us {US}   # 产物结构校验
 ```
 
 `check.py` 在两处可用：`df-validation`（文档阶段）与 `df-solver`（合并基线后复检）；两份拷贝必须字节一致，`check_skills.py` 会拦。
@@ -106,12 +110,14 @@ python df-validation/scripts/check.py --proj <工程> --us <US>   # 产物结构
 - **确定性优先**：能写成脚本校验的规则绝不留给模型肉眼判断
 - **不落状态文件**：阶段状态从磁盘产物推断，读的是 `status: done` 与文件存在性
 - **证据先于结论**：没有命令输出，不算完成
+- **合并靠判断**：脚本只做扫描、校验、原子预留、归档；并入基线一律人工分析后重写
+- **状态只推断一次**：阶段由 `df-env` 统一扫出并回传，其余 skill 不重复扫目录
 
 ## 仓库结构
 
 ```
 df-*/SKILL.md        13 个 skill
-df-*/templates/      产物模板（spec/design/delta/task/scope/validation/review/arch/README/ADR）
+df-*/templates/      产物模板（proposal/spec/design/delta-spec/delta-design/delta-arch/task/scope/validation/review/arch/README/ADR）
 df-*/scripts/        随 skill 分发的脚本（扫描、校验、归档、合并）
 df-*/references/     语言规范与坏味道（C/C++/Java/Python/Go/Rust/JS/TS）
 index.js             插件入口：把 df-* 注册成 skill provider

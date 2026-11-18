@@ -1,9 +1,9 @@
 ---
 name: df-env
-description: dev-flow 的定位阶段。确定本次改动落在哪个工程、建出 codespec 目录骨架、定出 US 编号，产出 df_proj_dir、df_us_id、df_change_dir、df_spec_dir 四个变量。
+description: dev-flow 的定位与现状盘点阶段。确定本次改动落在哪个工程、建出 codespec 骨架、定出 US 编号，并扫 changes/US-* 推断各条变更所处的 df_stage。
 ---
 
-df-env 只做三件事：**定工程**、**建目录**、**定 US 编号**。不写任何产物文件。
+df-env 做四件事：**定工程**、**建目录**、**定 US 编号**、**推断阶段**。不写任何产物文件。
 
 ## 变量
 
@@ -14,6 +14,42 @@ df-env 只做三件事：**定工程**、**建目录**、**定 US 编号**。不
 | `df_change_dir` | `{df_proj_dir}/codespec/changes/{df_us_id}` | - |
 | `df_spec_dir` | `{df_proj_dir}/codespec/specs` | - |
 
+## 变量从哪来（先解析，不足才问）
+
+进场先解析，按优先级取第一个非空值，**取到就锁定，后续步骤不再提问**：
+
+| 优先级 | 来源 | 判定方式 |
+|---|---|---|
+| 1 | **调用方入参** | `df-init` 等调用方必须把已知值传进来（`df_proj_dir=…`、`df_us_id=…`），收到即采用 |
+| 2 | **会话内已定** | 本轮对话里已确认过的值 |
+| 3 | **磁盘反推** | `codespec/changes/US-*` 存在时：`df_us_id` = 目录名，`df_proj_dir` = 该目录上溯三级 |
+
+**已经有的变量绝不重问**。重问只应发生在某个变量确实无从得知时——尤其 `df_us_id`：用户或调用方一旦定下，不许再让用户选一次。
+
+「必须先问」和「不许重问」不冲突：**首次定值要问，已定值不再问**。
+
+## 阶段推断（本 skill 的第二个职责）
+
+进场时扫 `{df_proj_dir}/codespec/changes/US-*`，对每条变更按磁盘现状推断 `df_stage`，随变量一起回传给调用方。**变量已存在时跳过定位提问，但推断照做。**
+
+| 磁盘现状 | 推断阶段 |
+|---|---|
+| `{df_change_dir}` 不存在 | `env` |
+| 基线 spec 一份都没有、或 `design.md` 缺失 | `proposal`（建基线形态） |
+| 基线齐备，但 `proposal.md` 缺失或不是 `done` | `proposal`（仅盘问形态） |
+| `delta-spec.md` 缺失或不是 `done` | `delta-spec` |
+| `delta-design.md` 缺失或不是 `done` | `delta-design` |
+| `{df_change_dir}/delta-arch.md` 不在，且 `docs/arch.md` 里也没有 `df-arch:{df_us_id}` 标记 | `arch` |
+| `task.md` 缺失或不是 `done` | `task` |
+| `scope.md` 缺失或不是 `done` | `scope` |
+| `validation.md` 缺失或不是 `done` | `validation` |
+| `task.md` 里仍有非`完成`的任务 | `solver` |
+| `review.md` 缺失或不是 `done` | `review` |
+| 以上全部满足 | `done` |
+
+判据只有一条：**产物在、且自报 `status: done`**。扫描面只有 `changes/US-*`，已归档到 `changes/archive/` 的不参与推断。
+
+推断结果随四个变量一起回传；**下游不重复扫描目录**——这是全流程唯一的阶段推断实现。
 ## 步骤
 
 ### 1. 定工程 df_proj_dir
@@ -76,7 +112,7 @@ for d in (base, base + "/specs", base + "/changes"):
 
 ### 3. 定 US 编号 df_us_id
 
-**已有 `df_us_id`（用户已指定某个 `US-*` 目录）→ 跳过本步**，只校验该目录存在。
+**`df_us_id` 已锁定（入参、会话或磁盘反推得到）→ 跳过本步**：不提问，只校验 `{df_proj_dir}/codespec/changes/{df_us_id}` 存在。
 
 **只读目录名**：列 `{df_proj_dir}/codespec/changes/` 下的 `US-*` 目录（第 2 步已建好），不打开任何产物文件。
 
@@ -113,13 +149,18 @@ AskUserQuestion({
 - 序号：已有 `US-*` 中 4 位序号最大值 +1，零填 4 位；无历史则 `0001`
 - 功能名：保留中文与字母数字，空格转 `-`，去 `\ / : * ? " < > |`，连续 `-` 合并，超过 20 字截断
 
-编号定下后补建 US 目录（幂等），再当场写出三个值：
+选**新建**时，US 目录用脚本原子预留，不要手写 makedirs：
 
-```python
-import os
-
-os.makedirs(r"{df_proj_dir}/codespec/changes/{df_us_id}", exist_ok=True)
+```bash
+python "<本 skill 目录>/scripts/reserve_us.py" --proj "{df_proj_dir}" --name "<功能名>"
 ```
+
+- 脚本用 `os.mkdir` 原子创建：目录已存在就换下一个序号重试，**两个进程同时预留不会拿到同一个编号**
+- 输出 JSON：`us_id` / `path` / `index`；功能名按下面的规则 slug 化，时间戳取当前本地时间
+- 选**已有候选**时不要跑它（目录已存在，直接采用 `df_us_id` = 目录名）
+- 功能名与序号规则不变：时间戳 `YYYYmmddHHmmss`、序号零填 4 位、保留中文与字母数字、去 `\ / : * ? " < > |`、连续 `-` 合并、超 20 字截断
+
+编号定下后当场写出三个值：
 
 ```
 df_change_dir = {df_proj_dir}/codespec/changes/{df_us_id}
@@ -131,6 +172,8 @@ df_spec_dir   = {df_proj_dir}/codespec/specs/
 - **只建目录，不写产物**：不创建 `.md`、不填内容、不推进 `df_stage`（跑完仍是 `env`）。`spec.md`、`design.md`、`delta-spec.md`、`delta-design.md`、`task.md`、`validation.md` 全部由后续阶段创建与填充。
 - **不落文件、不复述**：两个重要变量不写状态文件、不靠每步念叨；需要时从 `codespec/changes/US-*` 目录反推。
 - **幂等**：重复跑不报错、不覆盖、不删除已存在的目录或文件。
+- **并发边界**：骨架目录用 `makedirs(exist_ok=True)` 建，幂等，可并发；US 目录用 `reserve_us.py` 原子预留，不会撞号。
+- **同一 US 不许两个会话同时推进**：本 skill 只保证编号不冲突；产物写入没有跨进程锁，同一个 US 并行跑后续阶段会互相覆盖。
 - **候选只来自脚本**：相关性判断要在选项描述里写出依据（命中哪个词）；可以补 `新建`，但不能凭空编路径。
 - **值不许凭记忆改写**：路径一律按目录反推的形态写，长路径不许截短。
 - `df_change_dir` / `df_spec_dir` 永不单独提问，一律派生。

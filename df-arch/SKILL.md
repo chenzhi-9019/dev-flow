@@ -1,11 +1,9 @@
 ---
 name: df-arch
-description: 针对一条 US 变更，按模板生成该变更的架构文档 docs/arch_{US}.md，并新增或更新项目 README.md；架构与图形只在这里成文，不写代码。
+description: 针对一条 US 变更做增量架构分析——只分析待改模块与它们的直接关联模块，产出 delta-arch.md（含时序图与 UML 图），不做全量架构盘点。
 ---
 
-df-arch 产出两份文档：`{df_proj_dir}/docs/arch_{df_us_id}.md`（本变更的架构文档）与 `{df_proj_dir}/README.md`（项目门面）。不改代码，不写 spec/design/delta，也不推进 `df_stage`。
-
-架构与图形**只在这里成文**——`design.md` 与 `delta-design.md` 不再重复画图，它们只写决策与改动清单。
+df-arch 只回答一个问题：**这次改动会把架构动成什么样**。它产出 `{df_change_dir}/delta-arch.md`，不做全量盘点、不维护项目级 `docs/arch.md` 与 `README.md`（那些在基线阶段维护）。
 
 ## 变量
 
@@ -13,18 +11,17 @@ df-arch 产出两份文档：`{df_proj_dir}/docs/arch_{df_us_id}.md`（本变更
 |---|---|---|
 | `df_proj_dir` | 工程根 | 重要!!，禁止丢弃 |
 | `df_us_id` | 本次变更编号 | 重要!!，禁止丢弃 |
-| `df_change_dir` | `{df_proj_dir}/codespec/changes/{df_us_id}` | - |
+| `df_change_dir` | `{df_proj_dir}/codespec/changes/{df_us_id}`，delta-arch.md 落点 | - |
 
 变量缺失时先跑一次 `df-env` 补齐。
 
 ## 模板
 
-| 产物 | 模板 | 说明 |
-|---|---|---|
-| `docs/arch_{df_us_id}.md` | `templates/arch.md` | 系统架构设计文档，含上下文图、分层图、流程时序、部署与 UML |
-| `README.md` | `templates/README.md` | 项目门面，含简介、功能、安装、配置、常见问题 |
+| 产物 | 模板 |
+|---|---|
+| `{df_change_dir}/delta-arch.md` | `templates/delta-arch_template.md` |
 
-模板里的 `{{...}}` 是占位符，**落盘前必须清零**；标"可选"的章节用不上就整节删除，并同步删掉目录里那一行。
+模板里的 `{{...}}` 与 HTML 注释全部替换，落盘前清零。
 
 ## 步骤
 
@@ -32,70 +29,76 @@ df-arch 产出两份文档：`{df_proj_dir}/docs/arch_{df_us_id}.md`（本变更
 
 | 文件 | 用途 | 缺失时 |
 |---|---|---|
-| `{df_change_dir}/delta-design.md` | 本次改动清单与影响面 | **停手**：缺它就没有改动清单 |
-| `{df_change_dir}/delta-spec.md` | 需求口径，判断流程与边界 | **停手**：缺它就没有需求口径 |
-| `{df_change_dir}/proposal.md` | 变更背景与范围，决定架构文档里哪些章节要动 | 可跳过（仅提示） |
-| `{df_spec_dir}/design.md`（若存在） | 既有决策与风险，别与它冲突 | 跳过 |
-| `{df_proj_dir}/docs/arch.md`（若存在） | 既有架构文档，本次是**续写不是重写** | 跳过 |
-| `{df_proj_dir}/README.md`（若存在） | 本次是**更新不是覆盖** | 跳过 |
+| `{df_change_dir}/delta-design.md` | 改动清单与 `## Baseline Diff`，决定要分析哪些模块 | **停手**：缺它就没有改动范围 |
+| `{df_change_dir}/delta-spec.md` | 需求口径，判断调用链边界 | **停手** |
+| `{df_change_dir}/proposal.md` | 背景与「不做」清单，防止分析越界 | 可跳过 |
+| `{df_proj_dir}/README.md` | 项目对外描述，判断改动是否影响使用方式 | 可跳过 |
+| `{df_proj_dir}/docs/arch.md` | 全局架构，作为对照基线 | 可跳过，但要提示用户「全局架构文档尚未建立」 |
 
-### 2. 扫项目拿事实
+### 2. 圈定分析范围（只扩大一跳）
 
-```bash
-python "<本 skill 目录>/scripts/scan_project.py" --root "{df_proj_dir}" --limit 3000
+从 `delta-design.md` 的 `## Changes` 与 `## Baseline Diff` 出发：
+
+1. 列出**待修改模块**——本次真正要改的
+2. 列出它们的**直接关联模块**——只算一跳：直接调用它、被它调用、与它共享数据契约的
+3. **不扩到二跳**。二跳及以上只在 `## 对整体架构的影响` 里用一句话带过
+
+范围要能对上 `scope.md` 的白名单：白名单外的模块，只作为「明确不动」的对照出现在关联表里。
+
+### 3. 读代码拿事实
+
+对圈定的每个模块，读真实文件确认：模块路径、对外接口签名、依赖方向、现有调用链。**表格里的每一行都要能在代码里找到出处**，不许凭 `design.md` 的措辞推测。
+
+### 4. 与用户确认影响面
+
+分析结果先讲一遍，只问真正需要用户定的（提问只用 AskUserQuestion）：
+
+```js
+AskUserQuestion({
+  "questions": [
+    {
+      "header": "影响面（也可直接输入要补的模块）",
+      "question": "本次要改 <模块 A、B>，直接关联 <C、D>，其中 <C> 是否也要动？",
+      "options": [
+        {"label": "C 不动", "description": "只作为关联模块出现，接口保持不变"},
+        {"label": "C 要动", "description": "我会把它列入待修改模块，并补进 scope 讨论"},
+        {"label": "关联模块我另指", "description": "你直接给模块路径，我按你给的圈定"}
+      ],
+      "multiSelect": false
+    }
+  ]
+})
 ```
 
-输出一行紧凑 JSON（`files` / `exts` / `dirs` / `docs`）。据此再读关键文件：构建清单、入口文件、既有 `docs/` 与 `docs/adr/`。**图里的每个节点必须能在这些事实里找到出处**，不许画想象中的组件。
+### 5. 写 delta-arch.md
 
-### 3. 补齐架构信息
+按模板填，落盘到 `{df_change_dir}/delta-arch.md`：
 
-架构文档里有几类东西查不到、只能问用户，用 AskUserQuestion 问，一轮问完（形态与 `df-grill` 一致）：
-
-- 项目定位与读者：给管理层看还是给开发看，决定哪些章节保留
-- 非功能性要求：可用性、性能、容量、合规的量化指标
-- 部署形态：单机 / 容器 / 云托管，以及目标环境
-- 对外依赖与硬约束：第三方系统、合规限制、团队技术栈约束
-
-事实能查到的（技术栈、模块划分、依赖方向）不要问，直接写。
-
-### 4. 写 arch 文档
-
-按 `templates/arch.md` 填，落盘到 `{df_proj_dir}/docs/arch_{df_us_id}.md`：
-
-- 十节结构照模板；标"可选"的章节用不上就整节删除，目录同步删行
-- 每张 Mermaid 图独立可渲染：节点 ID 用英文或拼音，中文显示名放引号里
-- 视图分离：上下文图给产品看、分层与组件图给开发看、部署图给运维看，不要一张图塞所有信息
-- 文档版本、编写人、最后更新按实际填，**不留 `{{...}}`**
-- 本次变更带来的结构改动（新增模块、依赖方向变化）在图里体现出来，并在对应章节文字说明
-
-### 5. 写或更新 README.md
-
-按 `templates/README.md` 填（落盘到 `{df_proj_dir}/README.md`）：
-
-- **README 已存在时是更新，不是覆盖**：保留用户自己写的内容与徽章，只补缺的章节、修正过期信息；整节替换要说明理由
-- 安装与快速开始必须给出**可照抄的命令**，不要写"参见文档"
-- 技术栈表、环境要求表按扫描结果填，版本号取构建清单里的真实值
-- 同样不留 `{{...}}`
+- **时序图与 UML 图是必需的**：时序图画本次改动涉及的关键调用链，UML 用类图或组件图说明改动后的结构关系
+- 其他视图（上下文图、部署图、数据模型）**只在本次确实牵动时才画**，否则整节删掉
+- 参与者与节点必须是 `## 待修改模块` 或 `## 直接关联模块` 里出现过的，不许画没读过的组件
+- `## 对整体架构的影响` 要明确回答：有没有改变既有分层、依赖方向、部署形态；没有就写「无结构性影响」
+- frontmatter `status` 改成 `done`
 
 ### 6. 回读校验
 
-- `docs/arch_{df_us_id}.md`：十节标题在、目录与章节一致、`{{...}}` 清零、每个 ```mermaid 围栏闭合且至少有一张上下文图与一张分层/组件图
-- `README.md`：标题在、简介与安装章节非空、`{{...}}` 清零
-- 抽查图里 3 个节点名，必须能在扫描结果或实读文件中找到
-- 校验不过就地补齐；补不上就报出缺哪节，不留半成品
+- 模板要求的必备小节齐全；`{{...}}` 与注释清零
+- 至少一张 `sequenceDiagram` 与一张 `classDiagram`（或组件 `flowchart`），围栏闭合
+- 抽查图里 3 个节点名，必须能在实读文件中找到
+- 待修改模块与 `scope.md` 白名单不矛盾（白名单外的模块不许出现在「待修改」表里）
 
 ### 7. 简报与确认
 
-输出简报（不超过 8 行）：两份文档的路径与行数、arch 保留了哪几节（删掉哪些可选节）、README 是新建还是更新、本次结构改动在图里如何体现、未决项。然后提一题：
+简报（不超过 8 行）：待改模块几个、直接关联几个、接口有无变化、两张图分别画了什么、对整体架构的结论、范围外但值得注意的风险。然后提一题：
 
 ```js
 AskUserQuestion({
   "questions": [
     {
       "header": "验收（要改什么就直接输入）",
-      "question": "简报如上，符合你的要求吗？不符合就直接输入要改的地方。",
+      "question": "简报如上，这份增量架构分析符合你的要求吗？",
       "options": [
-        {"label": "符合", "description": "两份架构文档定稿"}
+        {"label": "符合", "description": "delta-arch.md 定稿"}
       ],
       "multiSelect": false
     }
@@ -107,21 +110,12 @@ AskUserQuestion({
 - 用户输入 → 按意见改 → 重新出简报 → 再问一次
 - **迭代上限 3 轮**；到顶列出未达成项并停手
 
-## 与 design / delta-design 的分工
-
-| 内容 | 归属 |
-|---|---|
-| 架构图、组件与依赖、流程时序、部署与 UML | 本 skill（arch） |
-| 决策与理由、取舍、风险 | `design.md` / `delta-design.md` |
-| 本次改动清单（改哪个模块、对应哪条需求） | `delta-design.md` 的 `## Changes` |
-
-同一件事不要在两处写两遍：arch 里讲"系统长什么样"，delta-design 里讲"这次改哪里"。
-
 ## 边界
 
-- **只写两份文档**：`docs/arch_{df_us_id}.md`、`README.md`。不写 `arch.md`（合并由收尾环节做）、不写 spec/design/delta/task/validation。
+- **只写 `{df_change_dir}/delta-arch.md`**：不写 `docs/arch.md`、`README.md`（项目级文档归基线阶段维护）、不写 spec/design/delta/task/scope/validation/review。
+- **只做增量**：不盘点全量模块、不重画系统上下文图、不写与本次无关的架构说明。
+- **范围只扩大一跳**：二跳以上只在「对整体架构的影响」里一句话带过。
 - **不改代码**，**不推进 `df_stage`**。
-- **README 不整体覆盖**：已有内容默认保留，只补与改。
-- **图不许凭空造**：节点与依赖方向必须有代码或文档出处。
+- **图不许凭空造**：节点与依赖方向必须有代码出处。
 - **提问只用 AskUserQuestion**。
 - **宿主没有 AskUserQuestion 时**：退回编号列表提问，不跳过提问。

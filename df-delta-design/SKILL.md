@@ -26,6 +26,8 @@ df-delta-design 产出一份东西：`{df_change_dir}/delta-design.md`——本�
 |---|---|
 | `{df_change_dir}/delta-spec.md` | **停手**：没有需求差异就没法设计差异，先补齐它 |
 | `{df_change_dir}/proposal.md` | 可跳过（仅提示）：背景、范围与取舍在这里，设计取舍要与它一致 |
+| `{df_proj_dir}/docs/arch.md` | 架构现状；设计不能与既有分层和依赖方向冲突 | **停手**：没有架构现状就无法判断冲突 |
+| `{df_proj_dir}/README.md` | 项目对外描述；改动若影响使用方式要在这里体现 | 可跳过（仅提示） |
 | 基线 spec（`specs/spec.md` 或 `specs/<capability>/spec.md`） | **停手**：一份都没有说明工程还没建基线 |
 | `{df_spec_dir}/design.md` | **停手**：同上 |
 
@@ -62,11 +64,11 @@ df-delta-design 产出一份东西：`{df_change_dir}/delta-design.md`——本�
 按 `templates/delta-design.md` 填，落盘到 `{df_change_dir}/delta-design.md`：
 
 - `## Scope` 按需求名对齐 `delta-spec.md`，不重述需求正文；`delta-spec.md` 声明了 `## Skipped` 时，这里写明"本次不涉及需求变更"
-- **不画图**：架构、组件依赖与流程时序成文在 `docs/arch_{US}.md`；这里只列改动与基线差异
+- **不画图**：架构、组件依赖与流程时序成文在 `{df_change_dir}/delta-arch.md`；这里只列改动与基线差异
 - `## Changes` 表格每行对应一条需求，路径写真实模块路径
 - `## Baseline Diff` 是合并基线的唯一依据，必须写清哪几节、变成什么
 
-若本次命中结构性修改判据——新增或删除模块/服务、依赖方向反转、换技术栈或部署形态、公共接口或数据所有权跨模块转移、目录分层重排——`## Baseline Diff` 必须逐条覆盖，一处含糊都会让合并后的基线失真；同时要求 `docs/arch_{US}.md` 在图里体现这些结构变化。
+若本次命中结构性修改判据——新增或删除模块/服务、依赖方向反转、换技术栈或部署形态、公共接口或数据所有权跨模块转移、目录分层重排——`## Baseline Diff` 必须逐条覆盖，一处含糊都会让合并后的基线失真；同时要求 `{df_change_dir}/delta-arch.md` 在图里体现这些结构变化。
 - `## Assumptions` 只在真有假设时保留，否则整节删掉
 - 模板里的 `<...>` 与 HTML 注释全部替换
 
@@ -74,7 +76,7 @@ df-delta-design 产出一份东西：`{df_change_dir}/delta-design.md`——本�
 
 - 五节齐全：`Context` / `Scope` / `Changes` / `Baseline Diff` / `Risks / Rollback`
 - `## Changes` 覆盖 `delta-spec.md` 里的每一条需求，一条不漏
-- 全文不含 ```mermaid 围栏（图不属于本文件）；若残留，删掉并确认信息已在 `docs/arch_{US}.md` 里
+- 全文不含 ```mermaid 围栏（图不属于本文件）；若残留，删掉并确认信息已在 `{df_change_dir}/delta-arch.md` 里
 - 无 `<...>`、`<!-- -->`、`TODO` 残留；frontmatter `status` 改成 `done`
 
 ### 6. 简报与确认
