@@ -25,6 +25,7 @@ df-delta-design 产出一份东西：`{df_change_dir}/delta-design.md`——本�
 | 文件 | 缺失时的处理 |
 |---|---|
 | `{df_change_dir}/delta-spec.md` | **停手**：没有需求差异就没法设计差异，先补齐它 |
+| `{df_change_dir}/proposal.md` | 可跳过（仅提示）：背景、范围与取舍在这里，设计取舍要与它一致 |
 | 基线 spec（`specs/spec.md` 或 `specs/<capability>/spec.md`） | **停手**：一份都没有说明工程还没建基线 |
 | `{df_spec_dir}/design.md` | **停手**：同上 |
 

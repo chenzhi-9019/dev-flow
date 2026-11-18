@@ -104,13 +104,15 @@ def norm(s):
     return re.sub(r"\s+", " ", s).strip().strip("\u3000").lower()
 
 
-def check_frontmatter(path, text):
+def check_frontmatter(path, text, severity="严重"):
+    """Baseline files are judged by existence, not status: pass severity='一般' for them."""
+    prefix = "W" if severity == "一般" else "E"
     st = status_of(text)
     if st is None:
-        add("严重", "E_FM_MISSING", path, 1, "frontmatter 缺 status 字段")
+        add(severity, f"{prefix}_FM_MISSING", path, 1, "frontmatter 缺 status 字段")
         return False
     if st != "done":
-        add("严重", "E_FM_NOT_DONE", path, 1, f"status 是 {st}，未定稿")
+        add(severity, f"{prefix}_FM_NOT_DONE", path, 1, f"status 是 {st}，未定稿")
         return False
     return True
 
@@ -273,6 +275,21 @@ def check_scope(path, text, changed):
                 add("严重", "E_SCOPE_VIOLATION", path, 1, f"改动文件不在白名单内：{name}")
 
 
+PROPOSAL_SECTIONS = ["## 背景", "## 目标", "## 范围", "## 需求草案", "## 关键取舍", "## 与基线的冲突"]
+
+
+def check_proposal(path, text):
+    for sec in PROPOSAL_SECTIONS:
+        if sec not in text:
+            add("严重", "E_PROPOSAL_SECTION", path, 1, f"缺小节 {sec}")
+    if "## 需求草案" in text:
+        start = text.index("## 需求草案")
+        end = text.find("\n## ", start + 1)
+        body = text[start:end if end != -1 else len(text)]
+        if len([l for l in body.splitlines() if l.strip().startswith(("1.", "2.", "- "))]) == 0:
+            add("一般", "W_PROPOSAL_EMPTY", path, 1, "需求草案没有任何条目")
+
+
 def check_review(path, text):
     for sec in ("## 评审包", "## 意见清单", "## 结论"):
         if sec not in text:
@@ -365,7 +382,7 @@ def main():
         if spec_text is None:
             add("严重", "E_NOFILE", spec_file, 0, "spec 文件读取失败")
             continue
-        check_frontmatter(spec_file, spec_text)
+        check_frontmatter(spec_file, spec_text, "一般")
         check_placeholders(spec_file, spec_text)
         names = check_spec(spec_file, spec_text)
         baseline_reqs |= names
@@ -376,7 +393,7 @@ def main():
     if design_text is None:
         add("严重", "E_NOFILE", design_path, 0, "基线 design.md 不存在")
     else:
-        check_frontmatter(design_path, design_text)
+        check_frontmatter(design_path, design_text, "一般")
         check_placeholders(design_path, design_text)
         check_design(design_path, design_text)
         check_adr_links(design_path, design_text, proj)
@@ -408,6 +425,13 @@ def main():
         val_text = read(val_path)
         if val_text:
             check_validation(val_path, val_text)
+        proposal_path = os.path.join(change_dir, "proposal.md")
+        proposal_text = read(proposal_path)
+        if proposal_text is None:
+            add("严重", "E_PROPOSAL_MISSING", proposal_path, 0, "proposal.md 不存在（本次变更没有提案记录）")
+        else:
+            check_placeholders(proposal_path, proposal_text)
+            check_proposal(proposal_path, proposal_text)
         scope_path = os.path.join(change_dir, "scope.md")
         scope_text = read(scope_path)
         if scope_text is None:

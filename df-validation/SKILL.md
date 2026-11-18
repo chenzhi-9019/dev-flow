@@ -23,7 +23,7 @@ df-validation 只做一件事：**在动手实现之前，把文档里的坑挖�
 | 文件 | 缺失时 |
 |---|---|
 | 基线 spec（`specs/spec.md` 或 `specs/<capability>/spec.md`）、`{df_spec_dir}/design.md` | 停手：基线不全，检查没有参照 |
-| `{df_change_dir}/delta-spec.md`、`delta-design.md`、`task.md` | 停手：指出缺哪份，先补齐再检 |
+| `{df_change_dir}/proposal.md`、`delta-spec.md`、`delta-design.md`、`task.md` | 停手：指出缺哪份，先补齐再检 |
 | `{df_proj_dir}/docs/arch_{df_us_id}.md`、`{df_proj_dir}/README.md` | 架构与项目门面；缺了说明架构文档还没产出，先补齐 |
 
 `{df_change_dir}/validation.md` 若已存在，读进来：本次是**追加轮次**，不是重写历史结论。
@@ -43,6 +43,7 @@ python "<本 skill 目录>/scripts/check.py" --proj "{df_proj_dir}" --us "{df_us
 - 脚本覆盖不到的（互相矛盾、无法实现、命名漂移）才由下面三个维度补
 
 **遗漏**
+- **proposal 的需求草案有哪条没被 delta-spec 覆盖**（这是最容易被漏掉的跨文件遗漏）
 - 某条 delta 需求没有任何任务覆盖
 - 某条需求没有 `#### Scenario:`，或有场景但没有可观测结果
 - design 里的组件、接口在代码里根本不存在（要实读确认）

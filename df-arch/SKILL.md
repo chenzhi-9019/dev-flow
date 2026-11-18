@@ -34,6 +34,7 @@ df-arch 产出两份文档：`{df_proj_dir}/docs/arch_{df_us_id}.md`（本变更
 |---|---|---|
 | `{df_change_dir}/delta-design.md` | 本次改动清单与影响面 | **停手**：缺它就没有改动清单 |
 | `{df_change_dir}/delta-spec.md` | 需求口径，判断流程与边界 | **停手**：缺它就没有需求口径 |
+| `{df_change_dir}/proposal.md` | 变更背景与范围，决定架构文档里哪些章节要动 | 可跳过（仅提示） |
 | `{df_spec_dir}/design.md`（若存在） | 既有决策与风险，别与它冲突 | 跳过 |
 | `{df_proj_dir}/docs/arch.md`（若存在） | 既有架构文档，本次是**续写不是重写** | 跳过 |
 | `{df_proj_dir}/README.md`（若存在） | 本次是**更新不是覆盖** | 跳过 |

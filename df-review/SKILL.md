@@ -43,7 +43,7 @@ df-review 做两件事：**发起一次有据可查的评审**，以及**接收�
 
 | 轴 | 查什么 | 依据 |
 |---|---|---|
-| 规格轴 | 每条 delta-spec 需求是否真的实现；每个 Scenario 能否复现；**改动是否都在 `scope.md` 白名单内** | `delta-spec.md`、`delta-design.md`、`scope.md` |
+| 规格轴 | 每条 delta-spec 需求是否真的实现；每个 Scenario 能否复现；实现是否还在 proposal 的目标与「不做」范围内；**改动是否都在 `scope.md` 白名单内** | `proposal.md`、`delta-spec.md`、`delta-design.md`、`scope.md` |
 | 标准轴 | 代码规范与坏味道；**必要性**：未使用符号、过度抽象、单调用却独立成函数、不可能发生的防御分支、为将来预留的参数；**长度**：函数 > 40 行或文件 > 400 行的，是否在 `## 长度超阈值` 里有站得住的原因 | `../df-solver/references/<语言>.md`、`scope.md` |
 | 测试轴 | `task.md` 的 `## 测试策略` 写了 TDD 时：按 `df-tdd` 的标准核对"先红后绿"证据、测试是否落在约定的 seam、期望值是否自证 | `task.md`、`## 回归` |
 

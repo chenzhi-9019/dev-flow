@@ -34,7 +34,8 @@ env --> proposal --> delta-spec --> delta-design --> arch --> task --> scope -->
 | 磁盘现状 | `df_stage` |
 |---|---|
 | `{df_change_dir}` 不存在 | `env` |
-| 基线 spec（`specs/spec.md` 或 `specs/<capability>/spec.md`）一份都没有、或 `design.md` 缺失、或任一 frontmatter 不是 `done` | `proposal` |
+| 基线 spec（`specs/spec.md` 或 `specs/<capability>/spec.md`）一份都没有、或 `design.md` 缺失 | `proposal`（建基线形态） |
+| 基线齐备，但 `proposal.md` 缺失或不是 `done` | `proposal`（仅盘问形态） |
 | `delta-spec.md` 缺失或不是 `done` | `delta-spec` |
 | `delta-design.md` 缺失或不是 `done` | `delta-design` |
 | `docs/arch_{df_us_id}.md` 不在，且 `docs/arch.md` 里也没有 `df-arch:{df_us_id}` 标记 | `arch` |
@@ -78,7 +79,7 @@ AskUserQuestion({
 
 | 阶段 | 调用的 skill | 进入条件 |
 |---|---|---|
-| `proposal` | `df-proposal` | 基线未建或 `status` 非 `done` |
+| `proposal` | `df-proposal` | 基线缺失，**或 `proposal.md` 缺失/未 done** |
 | `delta-spec` | `df-delta-spec` | 基线已 `done` |
 | `delta-design` | `df-delta-design` | `delta-spec.md` 已 `done` |
 | `arch` | `df-arch` | `delta-design.md` 已 `done` |
@@ -93,6 +94,7 @@ AskUserQuestion({
 - 每阶段由**它自己**出简报并问用户验收；用户点`符合`之后，df-init 才把 `df_stage` 推进一格
 - 用户输入修改意见 → 交回该阶段迭代，`df_stage` 保持不动
 - 阶段产物已 `done` → 跳过该阶段，直接进入下一格（可重复多次）
+- `proposal` 阶段有两条路：基线缺失就建基线（写 `spec.md` / `design.md`），基线齐备就只盘问、只写 `proposal.md`——**两种情况都要有 `proposal.md`**
 - **不许跳阶段**，也不许因为"看起来没必要"而跳过 validation
 - 任一阶段报错或阻塞 → 停下并报告卡在哪，不擅自换路
 
@@ -101,7 +103,7 @@ AskUserQuestion({
 `df_stage` 到 `done` 时输出一份总汇（不超过 8 行）：
 
 - 本次变更：`{df_us_id}` 与其功能名
-- 产物的路径与最终状态（spec 侧 / design.md / delta-spec / delta-design / arch / task / scope / validation / review）
+- 产物的路径与最终状态（proposal / spec 侧 / design.md / delta-spec / delta-design / arch / task / scope / validation / review）
 - 任务完成情况：`完成/总数`，阻塞项点名
 - 评审结论：`review.md` 的分档分布与"严重剩余 0"
 - 基线是否已合并（spec 侧每个文件与 `design.md` 的 `status`）

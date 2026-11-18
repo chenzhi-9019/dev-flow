@@ -28,6 +28,7 @@ df-task 只做拆分：产出一份 `{df_change_dir}/task.md`。不写实现，�
 | `{df_spec_dir}/design.md` | 现有架构与依赖方向，决定任务边界 |
 | `{df_change_dir}/delta-spec.md` | 本次的需求差异，任务要逐条覆盖 |
 | `{df_change_dir}/delta-design.md` | 本次的改动落点，任务按它的 `## Changes` 展开 |
+| `{df_change_dir}/proposal.md` | 背景与「不做」清单；任务不许越出这个范围 | 可跳过（仅提示） |
 | `{df_proj_dir}/docs/arch_{df_us_id}.md` | 本次架构文档；涉及结构改动时任务要覆盖图里新增/变化的组件 |
 
 再读 `{df_change_dir}/task.md`（若已存在）：本次是**更新**，保住已完成的条目与已有 ID，只增删改需要变的部分。

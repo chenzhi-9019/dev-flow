@@ -23,7 +23,8 @@ df-delta-spec 产出一份东西：`{df_change_dir}/delta-spec.md`——本次�
 读基线 spec 一侧——可能是单文件 `{df_spec_dir}/spec.md`，也可能是按能力拆开的 `{df_spec_dir}/<capability>/spec.md`（多份都要读）。
 
 - **一份都没有 → 停手**：没有基线就没有差异可言，让用户先建基线；本 skill 不代建。
-- 存在 → 把每条 `### Requirement:` 的标题与它规定的行为记下来，后面所有判断都对着它做。
+- 存在 → 把每条 `### Requirement:` 的标题与它规定的行为记下来，后面所有判断都对着它做
+- 顺带读 `{df_change_dir}/proposal.md`（若存在）：本次的需求草案、范围与关键取舍都在那里，差异要对着它写，别自己重造需求
 
 ### 2. 读已有 delta
 
